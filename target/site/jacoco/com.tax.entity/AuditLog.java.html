@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuditLog.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Tax Gap Detection Service</a> &gt; <a href="index.source.html" class="el_package">com.tax.entity</a> &gt; <span class="el_source">AuditLog.java</span></div><h1>AuditLog.java</h1><pre class="source lang-java linenums">package com.tax.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+/**
+ * Records every important action in the system.
+ * eventType can be:
+ *   INGESTION       - a transaction was received
+ *   TAX_CALCULATION - tax was computed
+ *   RULE_CHECK      - a rule was evaluated
+ */
+@Entity
+@Table(name = &quot;audit_logs&quot;)
+<span class="pc bnc" id="L17" title="All 46 branches missed.">@Data</span>
+public class AuditLog {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L22">    private Long id;</span>
+
+    @Column(name = &quot;event_type&quot;)
+<span class="nc" id="L25">    private String eventType;        // INGESTION / TAX_CALCULATION / RULE_CHECK</span>
+
+    @Column(name = &quot;transaction_id&quot;)
+<span class="nc" id="L28">    private String transactionId;    // which transaction this is about</span>
+
+    @Column(name = &quot;details&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L31">    private String details;          // what happened (plain English)</span>
+
+    @Column(name = &quot;created_at&quot;)
+<span class="nc" id="L34">    private LocalDateTime createdAt;</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

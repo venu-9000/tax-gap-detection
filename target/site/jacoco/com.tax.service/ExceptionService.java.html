@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExceptionService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Tax Gap Detection Service</a> &gt; <a href="index.source.html" class="el_package">com.tax.service</a> &gt; <span class="el_source">ExceptionService.java</span></div><h1>ExceptionService.java</h1><pre class="source lang-java linenums">package com.tax.service;
+
+import com.tax.entity.TaxException;
+import com.tax.repository.TaxExceptionRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+<span class="fc" id="L11">@RequiredArgsConstructor</span>
+public class ExceptionService {
+
+    private final TaxExceptionRepository exceptionRepository;
+
+    // Get ALL exceptions
+    public List&lt;TaxException&gt; getAll() {
+<span class="fc" id="L18">        return exceptionRepository.findAll();</span>
+    }
+
+    // Filter exceptions by any combination of customerId, severity, ruleName
+    public List&lt;TaxException&gt; filter(String customerId, String severity, String ruleName) {
+
+        // All 3 filters
+<span class="fc bfc" id="L25" title="All 6 branches covered.">        if (customerId != null &amp;&amp; severity != null &amp;&amp; ruleName != null) {</span>
+<span class="fc" id="L26">            return exceptionRepository</span>
+<span class="fc" id="L27">                    .findByCustomerIdAndSeverityAndRuleName(customerId, severity, ruleName);</span>
+        }
+        // customerId + severity
+<span class="fc bfc" id="L30" title="All 4 branches covered.">        if (customerId != null &amp;&amp; severity != null) {</span>
+<span class="fc" id="L31">            return exceptionRepository.findByCustomerIdAndSeverity(customerId, severity);</span>
+        }
+        // customerId + ruleName
+<span class="fc bfc" id="L34" title="All 4 branches covered.">        if (customerId != null &amp;&amp; ruleName != null) {</span>
+<span class="fc" id="L35">            return exceptionRepository.findByCustomerIdAndRuleName(customerId, ruleName);</span>
+        }
+        // severity + ruleName
+<span class="fc bfc" id="L38" title="All 4 branches covered.">        if (severity != null &amp;&amp; ruleName != null) {</span>
+<span class="fc" id="L39">            return exceptionRepository.findBySeverityAndRuleName(severity, ruleName);</span>
+        }
+        // customerId only
+<span class="fc bfc" id="L42" title="All 2 branches covered.">        if (customerId != null) {</span>
+<span class="fc" id="L43">            return exceptionRepository.findByCustomerId(customerId);</span>
+        }
+        // severity only
+<span class="fc bfc" id="L46" title="All 2 branches covered.">        if (severity != null) {</span>
+<span class="fc" id="L47">            return exceptionRepository.findBySeverity(severity);</span>
+        }
+        // ruleName only
+<span class="fc bfc" id="L50" title="All 2 branches covered.">        if (ruleName != null) {</span>
+<span class="fc" id="L51">            return exceptionRepository.findByRuleName(ruleName);</span>
+        }
+
+        // No filters → return everything
+<span class="fc" id="L55">        return exceptionRepository.findAll();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

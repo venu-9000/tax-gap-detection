@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TransactionService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Tax Gap Detection Service</a> &gt; <a href="index.source.html" class="el_package">com.tax.service</a> &gt; <span class="el_source">TransactionService.java</span></div><h1>TransactionService.java</h1><pre class="source lang-java linenums">package com.tax.service;
+
+import com.tax.dto.BatchRequest;
+import com.tax.dto.TransactionRequest;
+import com.tax.entity.*;
+import com.tax.repository.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+
+@Service
+<span class="fc" id="L19">@RequiredArgsConstructor</span>
+<span class="fc" id="L20">@Slf4j</span>
+public class TransactionService {
+
+    private final TransactionRepository transactionRepository;
+    private final TaxResultRepository taxResultRepository;
+    private final TaxExceptionRepository taxExceptionRepository;
+    private final TaxRuleRepository taxRuleRepository;
+    private final AuditLogRepository auditLogRepository;
+
+    // ─────────────────────────────────────────────────
+    // 1. Process a full batch of transactions
+    // ─────────────────────────────────────────────────
+    @Transactional
+    public Map&lt;String, Object&gt; processBatch(BatchRequest request) {
+<span class="fc" id="L34">        int success = 0;</span>
+<span class="fc" id="L35">        int failure = 0;</span>
+<span class="fc" id="L36">        List&lt;Map&lt;String, Object&gt;&gt; results = new ArrayList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L38" title="All 2 branches covered.">        for (TransactionRequest req : request.getTransactions()) {</span>
+<span class="fc" id="L39">            Map&lt;String, Object&gt; result = processSingle(req);</span>
+<span class="fc" id="L40">            results.add(result);</span>
+
+<span class="fc bfc" id="L42" title="All 2 branches covered.">            if (&quot;SUCCESS&quot;.equals(result.get(&quot;validationStatus&quot;))) {</span>
+<span class="fc" id="L43">                success++;</span>
+            } else {
+<span class="fc" id="L45">                failure++;</span>
+            }
+<span class="fc" id="L47">        }</span>
+
+<span class="fc" id="L49">        Map&lt;String, Object&gt; response = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L50">        response.put(&quot;totalReceived&quot;, request.getTransactions().size());</span>
+<span class="fc" id="L51">        response.put(&quot;successCount&quot;, success);</span>
+<span class="fc" id="L52">        response.put(&quot;failureCount&quot;, failure);</span>
+<span class="fc" id="L53">        response.put(&quot;results&quot;, results);</span>
+<span class="fc" id="L54">        return response;</span>
+    }
+
+    // ─────────────────────────────────────────────────
+    // 2. Process ONE transaction
+    // ─────────────────────────────────────────────────
+    private Map&lt;String, Object&gt; processSingle(TransactionRequest req) {
+
+        // Step A: Validate
+<span class="fc" id="L63">        List&lt;String&gt; errors = validate(req);</span>
+
+        // Step B: Build the Transaction object
+<span class="fc" id="L66">        Transaction tx = new Transaction();</span>
+<span class="fc" id="L67">        tx.setTransactionId(req.getTransactionId());</span>
+<span class="fc" id="L68">        tx.setCustomerId(req.getCustomerId());</span>
+<span class="fc" id="L69">        tx.setAmount(req.getAmount());</span>
+<span class="fc" id="L70">        tx.setTaxRate(req.getTaxRate());</span>
+<span class="fc" id="L71">        tx.setReportedTax(req.getReportedTax());</span>
+<span class="fc" id="L72">        tx.setTransactionType(req.getTransactionType());</span>
+<span class="fc" id="L73">        tx.setCreatedAt(LocalDateTime.now());</span>
+
+        // Parse the date
+<span class="pc bpc" id="L76" title="1 of 4 branches missed.">        if (req.getDate() != null &amp;&amp; !req.getDate().isBlank()) {</span>
+            try {
+<span class="fc" id="L78">                tx.setDate(LocalDate.parse(req.getDate()));</span>
+<span class="fc" id="L79">            } catch (Exception e) {</span>
+<span class="fc" id="L80">                errors.add(&quot;Invalid date format. Use yyyy-MM-dd (example: 2024-03-15)&quot;);</span>
+<span class="fc" id="L81">            }</span>
+        }
+
+        // Step C: Set status based on validation
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        if (errors.isEmpty()) {</span>
+<span class="fc" id="L86">            tx.setValidationStatus(&quot;SUCCESS&quot;);</span>
+        } else {
+<span class="fc" id="L88">            tx.setValidationStatus(&quot;FAILURE&quot;);</span>
+<span class="fc" id="L89">            tx.setFailureReasons(String.join(&quot; | &quot;, errors));</span>
+        }
+
+        // Step D: Save to PostgreSQL
+<span class="fc" id="L93">        transactionRepository.save(tx);</span>
+<span class="fc" id="L94">        log.info(&quot;Transaction [{}] saved with status: {}&quot;, tx.getTransactionId(), tx.getValidationStatus());</span>
+
+        // Step E: Write audit log
+<span class="fc" id="L97">        saveAuditLog(&quot;INGESTION&quot;, tx.getTransactionId(),</span>
+<span class="fc" id="L98">                &quot;Transaction saved. Status=&quot; + tx.getValidationStatus()</span>
+<span class="fc bfc" id="L99" title="All 2 branches covered.">                + (tx.getFailureReasons() != null ? &quot;. Errors: &quot; + tx.getFailureReasons() : &quot;&quot;));</span>
+
+        // Step F: Only valid transactions get tax calc + rule checks
+<span class="fc bfc" id="L102" title="All 2 branches covered.">        if (&quot;SUCCESS&quot;.equals(tx.getValidationStatus())) {</span>
+<span class="fc" id="L103">            calculateTax(tx);</span>
+<span class="fc" id="L104">            checkAllRules(tx);</span>
+        }
+
+        // Return summary for this transaction
+<span class="fc" id="L108">        Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L109">        result.put(&quot;transactionId&quot;, tx.getTransactionId());</span>
+<span class="fc" id="L110">        result.put(&quot;customerId&quot;, tx.getCustomerId());</span>
+<span class="fc" id="L111">        result.put(&quot;validationStatus&quot;, tx.getValidationStatus());</span>
+<span class="fc" id="L112">        result.put(&quot;failureReasons&quot;, tx.getFailureReasons());</span>
+<span class="fc" id="L113">        return result;</span>
+    }
+
+    // ─────────────────────────────────────────────────
+    // 3. Validate fields
+    // ─────────────────────────────────────────────────
+    private List&lt;String&gt; validate(TransactionRequest req) {
+<span class="fc" id="L120">        List&lt;String&gt; errors = new ArrayList&lt;&gt;();</span>
+
+<span class="pc bpc" id="L122" title="1 of 4 branches missed.">        if (req.getTransactionId() == null || req.getTransactionId().isBlank())</span>
+<span class="fc" id="L123">            errors.add(&quot;transactionId is required&quot;);</span>
+
+<span class="pc bpc" id="L125" title="1 of 4 branches missed.">        if (req.getCustomerId() == null || req.getCustomerId().isBlank())</span>
+<span class="fc" id="L126">            errors.add(&quot;customerId is required&quot;);</span>
+
+<span class="pc bpc" id="L128" title="1 of 4 branches missed.">        if (req.getDate() == null || req.getDate().isBlank())</span>
+<span class="fc" id="L129">            errors.add(&quot;date is required&quot;);</span>
+
+<span class="pc bpc" id="L131" title="1 of 4 branches missed.">        if (req.getTransactionType() == null || req.getTransactionType().isBlank())</span>
+<span class="fc" id="L132">            errors.add(&quot;transactionType is required (SALE / REFUND / EXPENSE)&quot;);</span>
+
+<span class="fc bfc" id="L134" title="All 2 branches covered.">        if (req.getAmount() == null) {</span>
+<span class="fc" id="L135">            errors.add(&quot;amount is required&quot;);</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">        } else if (req.getAmount().compareTo(BigDecimal.ZERO) &lt;= 0) {</span>
+<span class="fc" id="L137">            errors.add(&quot;amount must be greater than 0&quot;);</span>
+        }
+
+<span class="fc bfc" id="L140" title="All 2 branches covered.">        if (req.getTaxRate() == null)</span>
+<span class="fc" id="L141">            errors.add(&quot;taxRate is required&quot;);</span>
+
+        // Check for duplicate transactionId
+<span class="fc bfc" id="L144" title="All 2 branches covered.">        if (req.getTransactionId() != null</span>
+<span class="fc bfc" id="L145" title="All 2 branches covered.">                &amp;&amp; transactionRepository.existsByTransactionId(req.getTransactionId())) {</span>
+<span class="fc" id="L146">            errors.add(&quot;transactionId already exists: &quot; + req.getTransactionId());</span>
+        }
+
+<span class="fc" id="L149">        return errors;</span>
+    }
+
+    // ─────────────────────────────────────────────────
+    // 4. Tax Gap Calculation
+    //    expectedTax = amount * taxRate
+    //    taxGap      = expectedTax - reportedTax
+    // ─────────────────────────────────────────────────
+    public void calculateTax(Transaction tx) {
+
+        // Formula: expectedTax = amount × taxRate
+<span class="fc" id="L160">        BigDecimal expectedTax = tx.getAmount()</span>
+<span class="fc" id="L161">                .multiply(tx.getTaxRate())</span>
+<span class="fc" id="L162">                .setScale(4, RoundingMode.HALF_UP);</span>
+
+        BigDecimal taxGap;
+        String complianceStatus;
+
+<span class="fc bfc" id="L167" title="All 2 branches covered.">        if (tx.getReportedTax() == null) {</span>
+            // Customer didn't report any tax → NON_COMPLIANT
+<span class="fc" id="L169">            taxGap = expectedTax;</span>
+<span class="fc" id="L170">            complianceStatus = &quot;NON_COMPLIANT&quot;;</span>
+
+        } else {
+            // taxGap = expectedTax - reportedTax
+<span class="fc" id="L174">            taxGap = expectedTax.subtract(tx.getReportedTax())</span>
+<span class="fc" id="L175">                    .setScale(4, RoundingMode.HALF_UP);</span>
+
+<span class="fc" id="L177">            BigDecimal absGap = taxGap.abs();</span>
+
+<span class="fc bfc" id="L179" title="All 2 branches covered.">            if (absGap.compareTo(BigDecimal.ONE) &lt;= 0) {</span>
+<span class="fc" id="L180">                complianceStatus = &quot;COMPLIANT&quot;;       // gap ≤ 1 → fine</span>
+<span class="fc bfc" id="L181" title="All 2 branches covered.">            } else if (taxGap.compareTo(BigDecimal.ZERO) &gt; 0) {</span>
+<span class="fc" id="L182">                complianceStatus = &quot;UNDERPAID&quot;;       // paid less than expected</span>
+            } else {
+<span class="fc" id="L184">                complianceStatus = &quot;OVERPAID&quot;;        // paid more than expected</span>
+            }
+        }
+
+        // Save tax result
+<span class="fc" id="L189">        TaxResult taxResult = new TaxResult();</span>
+<span class="fc" id="L190">        taxResult.setTransactionId(tx.getTransactionId());</span>
+<span class="fc" id="L191">        taxResult.setExpectedTax(expectedTax);</span>
+<span class="fc" id="L192">        taxResult.setTaxGap(taxGap);</span>
+<span class="fc" id="L193">        taxResult.setComplianceStatus(complianceStatus);</span>
+<span class="fc" id="L194">        taxResult.setCalculatedAt(LocalDateTime.now());</span>
+<span class="fc" id="L195">        taxResultRepository.save(taxResult);</span>
+
+<span class="fc" id="L197">        log.info(&quot;Tax calculated for [{}]: expected={}, gap={}, status={}&quot;,</span>
+<span class="fc" id="L198">                tx.getTransactionId(), expectedTax, taxGap, complianceStatus);</span>
+
+<span class="fc" id="L200">        saveAuditLog(&quot;TAX_CALCULATION&quot;, tx.getTransactionId(),</span>
+                &quot;expectedTax=&quot; + expectedTax
+                + &quot;, taxGap=&quot; + taxGap
+                + &quot;, complianceStatus=&quot; + complianceStatus);
+<span class="fc" id="L204">    }</span>
+
+    // ─────────────────────────────────────────────────
+    // 5. Run All Active Rules
+    // ─────────────────────────────────────────────────
+    public void checkAllRules(Transaction tx) {
+
+<span class="fc" id="L211">        List&lt;TaxRule&gt; activeRules = taxRuleRepository.findByEnabledTrue();</span>
+
+<span class="fc bfc" id="L213" title="All 2 branches covered.">        for (TaxRule rule : activeRules) {</span>
+<span class="fc" id="L214">            boolean violated = false;</span>
+<span class="fc" id="L215">            String message = &quot;&quot;;</span>
+
+<span class="fc bfc" id="L217" title="All 4 branches covered.">            switch (rule.getRuleName()) {</span>
+
+                case &quot;HIGH_VALUE&quot;:
+                    // Flag if transaction amount exceeds threshold
+<span class="fc bfc" id="L221" title="All 2 branches covered.">                    if (tx.getAmount().compareTo(rule.getThreshold()) &gt; 0) {</span>
+<span class="fc" id="L222">                        violated = true;</span>
+<span class="fc" id="L223">                        message = &quot;Transaction amount &quot; + tx.getAmount()</span>
+<span class="fc" id="L224">                                + &quot; exceeds high-value threshold of &quot; + rule.getThreshold();</span>
+                    }
+                    break;
+
+                case &quot;REFUND_CHECK&quot;:
+                    // Only applies to REFUND type transactions
+<span class="fc bfc" id="L230" title="All 2 branches covered.">                    if (&quot;REFUND&quot;.equalsIgnoreCase(tx.getTransactionType())) {</span>
+<span class="fc bfc" id="L231" title="All 2 branches covered.">                        if (tx.getAmount().compareTo(rule.getMaxRefund()) &gt; 0) {</span>
+<span class="fc" id="L232">                            violated = true;</span>
+<span class="fc" id="L233">                            message = &quot;Refund amount &quot; + tx.getAmount()</span>
+<span class="fc" id="L234">                                    + &quot; exceeds maximum allowed refund of &quot; + rule.getMaxRefund();</span>
+                        }
+                    }
+                    break;
+
+                case &quot;GST_SLAB&quot;:
+                    // If amount is above slab but tax rate is too low → violation
+<span class="fc bfc" id="L241" title="All 2 branches covered.">                    boolean aboveSlab = tx.getAmount().compareTo(rule.getSlabThreshold()) &gt; 0;</span>
+<span class="fc bfc" id="L242" title="All 2 branches covered.">                    boolean rateTooLow = tx.getTaxRate().compareTo(rule.getMinTaxRate()) &lt; 0;</span>
+<span class="fc bfc" id="L243" title="All 4 branches covered.">                    if (aboveSlab &amp;&amp; rateTooLow) {</span>
+<span class="fc" id="L244">                        violated = true;</span>
+<span class="fc" id="L245">                        message = &quot;Amount &quot; + tx.getAmount()</span>
+<span class="fc" id="L246">                                + &quot; is above GST slab threshold &quot; + rule.getSlabThreshold()</span>
+<span class="fc" id="L247">                                + &quot; but taxRate &quot; + tx.getTaxRate()</span>
+<span class="fc" id="L248">                                + &quot; is below minimum required &quot; + rule.getMinTaxRate();</span>
+                    }
+                    break;
+
+                default:
+<span class="fc" id="L253">                    log.warn(&quot;Unknown rule: {}&quot;, rule.getRuleName());</span>
+            }
+
+            // Log every rule check
+<span class="fc" id="L257">            saveAuditLog(&quot;RULE_CHECK&quot;, tx.getTransactionId(),</span>
+<span class="fc" id="L258">                    &quot;Rule=&quot; + rule.getRuleName()</span>
+                    + &quot; | Violated=&quot; + violated
+<span class="fc bfc" id="L260" title="All 2 branches covered.">                    + (violated ? &quot; | &quot; + message : &quot;&quot;));</span>
+
+            // If violated → create an exception record
+<span class="fc bfc" id="L263" title="All 2 branches covered.">            if (violated) {</span>
+<span class="fc" id="L264">                TaxException exception = new TaxException();</span>
+<span class="fc" id="L265">                exception.setTransactionId(tx.getTransactionId());</span>
+<span class="fc" id="L266">                exception.setCustomerId(tx.getCustomerId());</span>
+<span class="fc" id="L267">                exception.setRuleName(rule.getRuleName());</span>
+<span class="fc" id="L268">                exception.setSeverity(rule.getSeverity());</span>
+<span class="fc" id="L269">                exception.setMessage(message);</span>
+<span class="fc" id="L270">                exception.setCreatedAt(LocalDateTime.now());</span>
+<span class="fc" id="L271">                taxExceptionRepository.save(exception);</span>
+
+<span class="fc" id="L273">                log.warn(&quot;Exception created for [{}] - Rule: {} - {}&quot;,</span>
+<span class="fc" id="L274">                        tx.getTransactionId(), rule.getRuleName(), message);</span>
+            }
+<span class="fc" id="L276">        }</span>
+<span class="fc" id="L277">    }</span>
+
+    // ─────────────────────────────────────────────────
+    // 6. Helper: Save Audit Log
+    // ─────────────────────────────────────────────────
+    private void saveAuditLog(String eventType, String transactionId, String details) {
+<span class="fc" id="L283">        AuditLog log = new AuditLog();</span>
+<span class="fc" id="L284">        log.setEventType(eventType);</span>
+<span class="fc" id="L285">        log.setTransactionId(transactionId);</span>
+<span class="fc" id="L286">        log.setDetails(details);</span>
+<span class="fc" id="L287">        log.setCreatedAt(LocalDateTime.now());</span>
+<span class="fc" id="L288">        auditLogRepository.save(log);</span>
+<span class="fc" id="L289">    }</span>
+
+    // ─────────────────────────────────────────────────
+    // 7. Get all transactions
+    // ─────────────────────────────────────────────────
+    public List&lt;Transaction&gt; getAllTransactions() {
+<span class="fc" id="L295">        return transactionRepository.findAll();</span>
+    }
+
+    // ─────────────────────────────────────────────────
+    // 8. Get one transaction by its ID
+    // ─────────────────────────────────────────────────
+    public Transaction getByTransactionId(String transactionId) {
+<span class="fc" id="L302">        return transactionRepository.findByTransactionId(transactionId).orElse(null);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

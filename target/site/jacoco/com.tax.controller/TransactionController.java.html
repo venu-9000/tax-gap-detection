@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TransactionController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Tax Gap Detection Service</a> &gt; <a href="index.source.html" class="el_package">com.tax.controller</a> &gt; <span class="el_source">TransactionController.java</span></div><h1>TransactionController.java</h1><pre class="source lang-java linenums">package com.tax.controller;
+
+import com.tax.dto.BatchRequest;
+import com.tax.entity.Transaction;
+import com.tax.service.TransactionService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
+
+@RestController
+@RequestMapping(&quot;/api/transactions&quot;)
+<span class="nc" id="L14">@RequiredArgsConstructor</span>
+public class TransactionController {
+
+    private final TransactionService transactionService;
+
+    /**
+     * POST /api/transactions/batch
+     * Upload a batch of transactions
+     */
+    @PostMapping(&quot;/batch&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; uploadBatch(
+            @RequestBody BatchRequest request) {
+
+        // Validate request
+<span class="nc bnc" id="L28" title="All 4 branches missed.">        if (request.getTransactions() == null || request.getTransactions().isEmpty()) {</span>
+<span class="nc" id="L29">            Map&lt;String, Object&gt; error = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L30">            error.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L31">            error.put(&quot;message&quot;, &quot;No transactions provided in request body&quot;);</span>
+<span class="nc" id="L32">            return ResponseEntity.badRequest().body(error);</span>
+        }
+
+<span class="nc" id="L35">        Map&lt;String, Object&gt; data = transactionService.processBatch(request);</span>
+
+<span class="nc" id="L37">        Map&lt;String, Object&gt; response = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L38">        response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L39">        response.put(&quot;message&quot;, &quot;Batch processed successfully&quot;);</span>
+<span class="nc" id="L40">        response.put(&quot;data&quot;, data);</span>
+<span class="nc" id="L41">        return ResponseEntity.ok(response);</span>
+    }
+
+    /**
+     * GET /api/transactions
+     * Get all transactions
+     */
+    @GetMapping
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getAllTransactions() {
+<span class="nc" id="L50">        List&lt;Transaction&gt; list = transactionService.getAllTransactions();</span>
+
+<span class="nc" id="L52">        Map&lt;String, Object&gt; response = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L53">        response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L54">        response.put(&quot;count&quot;, list.size());</span>
+<span class="nc" id="L55">        response.put(&quot;data&quot;, list);</span>
+<span class="nc" id="L56">        return ResponseEntity.ok(response);</span>
+    }
+
+    /**
+     * GET /api/transactions/{transactionId}
+     * Get a single transaction by ID
+     */
+    @GetMapping(&quot;/{transactionId}&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getOne(
+            @PathVariable String transactionId) {
+
+<span class="nc" id="L67">        Transaction tx = transactionService.getByTransactionId(transactionId);</span>
+
+<span class="nc" id="L69">        Map&lt;String, Object&gt; response = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">        if (tx == null) {</span>
+<span class="nc" id="L71">            response.put(&quot;success&quot;, false);</span>
+<span class="nc" id="L72">            response.put(&quot;message&quot;, &quot;Transaction not found: &quot; + transactionId);</span>
+<span class="nc" id="L73">            return ResponseEntity.status(404).body(response);</span>
+        }
+
+<span class="nc" id="L76">        response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L77">        response.put(&quot;data&quot;, tx);</span>
+<span class="nc" id="L78">        return ResponseEntity.ok(response);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

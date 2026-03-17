@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReportController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Tax Gap Detection Service</a> &gt; <a href="index.source.html" class="el_package">com.tax.controller</a> &gt; <span class="el_source">ReportController.java</span></div><h1>ReportController.java</h1><pre class="source lang-java linenums">package com.tax.controller;
+
+import com.tax.service.ReportService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
+
+@RestController
+@RequestMapping(&quot;/api/reports&quot;)
+<span class="nc" id="L12">@RequiredArgsConstructor</span>
+public class ReportController {
+
+    private final ReportService reportService;
+
+    /**
+     * GET /api/reports/customer-summary
+     * Returns tax summary grouped per customer:
+     * totalAmount, totalReportedTax, totalExpectedTax,
+     * totalTaxGap, complianceScore
+     */
+    @GetMapping(&quot;/customer-summary&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; customerSummary() {
+<span class="nc" id="L25">        List&lt;Map&lt;String, Object&gt;&gt; data = reportService.getCustomerTaxSummary();</span>
+
+<span class="nc" id="L27">        Map&lt;String, Object&gt; response = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L28">        response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L29">        response.put(&quot;count&quot;, data.size());</span>
+<span class="nc" id="L30">        response.put(&quot;data&quot;, data);</span>
+<span class="nc" id="L31">        return ResponseEntity.ok(response);</span>
+    }
+
+    /**
+     * GET /api/reports/exception-summary
+     * Returns:
+     *   totalExceptions
+     *   countBySeverity  (HIGH, MEDIUM, LOW)
+     *   countByCustomer  (per customer)
+     */
+    @GetMapping(&quot;/exception-summary&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; exceptionSummary() {
+<span class="nc" id="L43">        Map&lt;String, Object&gt; data = reportService.getExceptionSummary();</span>
+
+<span class="nc" id="L45">        Map&lt;String, Object&gt; response = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L46">        response.put(&quot;success&quot;, true);</span>
+<span class="nc" id="L47">        response.put(&quot;data&quot;, data);</span>
+<span class="nc" id="L48">        return ResponseEntity.ok(response);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

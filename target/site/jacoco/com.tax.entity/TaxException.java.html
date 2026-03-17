@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TaxException.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Tax Gap Detection Service</a> &gt; <a href="index.source.html" class="el_package">com.tax.entity</a> &gt; <span class="el_source">TaxException.java</span></div><h1>TaxException.java</h1><pre class="source lang-java linenums">package com.tax.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+/**
+ * Stores rule violations (exceptions).
+ * Example: transaction amount &gt; 1 lakh → exception created.
+ */
+@Entity
+@Table(name = &quot;tax_exceptions&quot;)
+<span class="pc bnc" id="L14" title="All 62 branches missed.">@Data</span>
+public class TaxException {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L19">    private Long id;</span>
+
+    @Column(name = &quot;transaction_id&quot;)
+<span class="nc" id="L22">    private String transactionId;    // which transaction triggered this</span>
+
+    @Column(name = &quot;customer_id&quot;)
+<span class="fc" id="L25">    private String customerId;       // which customer</span>
+
+    @Column(name = &quot;rule_name&quot;)
+<span class="nc" id="L28">    private String ruleName;         // which rule was violated</span>
+
+    @Column(name = &quot;severity&quot;)
+<span class="fc" id="L31">    private String severity;         // HIGH / MEDIUM / LOW</span>
+
+    @Column(name = &quot;message&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L34">    private String message;          // description of the violation</span>
+
+    @Column(name = &quot;created_at&quot;)
+<span class="nc" id="L37">    private LocalDateTime createdAt;</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReportService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Tax Gap Detection Service</a> &gt; <a href="index.source.html" class="el_package">com.tax.service</a> &gt; <span class="el_source">ReportService.java</span></div><h1>ReportService.java</h1><pre class="source lang-java linenums">package com.tax.service;
+
+import com.tax.entity.TaxException;
+import com.tax.entity.TaxResult;
+import com.tax.entity.Transaction;
+import com.tax.repository.TaxExceptionRepository;
+import com.tax.repository.TaxResultRepository;
+import com.tax.repository.TransactionRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.*;
+
+@Service
+<span class="fc" id="L17">@RequiredArgsConstructor</span>
+public class ReportService {
+
+    private final TransactionRepository transactionRepository;
+    private final TaxResultRepository taxResultRepository;
+    private final TaxExceptionRepository taxExceptionRepository;
+
+    // ─────────────────────────────────────────────────
+    // Report 1: Customer Tax Summary
+    // Groups all data by customer and calculates totals
+    // ─────────────────────────────────────────────────
+    public List&lt;Map&lt;String, Object&gt;&gt; getCustomerTaxSummary() {
+
+        // Get all successful transactions
+<span class="fc" id="L31">        List&lt;Transaction&gt; allTransactions =</span>
+<span class="fc" id="L32">                transactionRepository.findByValidationStatus(&quot;SUCCESS&quot;);</span>
+
+        // Group by customerId
+<span class="fc" id="L35">        Map&lt;String, List&lt;Transaction&gt;&gt; byCustomer = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">        for (Transaction tx : allTransactions) {</span>
+<span class="fc" id="L37">            byCustomer</span>
+<span class="fc" id="L38">                .computeIfAbsent(tx.getCustomerId(), k -&gt; new ArrayList&lt;&gt;())</span>
+<span class="fc" id="L39">                .add(tx);</span>
+<span class="fc" id="L40">        }</span>
+
+<span class="fc" id="L42">        List&lt;Map&lt;String, Object&gt;&gt; report = new ArrayList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L44" title="All 2 branches covered.">        for (Map.Entry&lt;String, List&lt;Transaction&gt;&gt; entry : byCustomer.entrySet()) {</span>
+<span class="fc" id="L45">            String customerId = entry.getKey();</span>
+<span class="fc" id="L46">            List&lt;Transaction&gt; txList = entry.getValue();</span>
+
+<span class="fc" id="L48">            BigDecimal totalAmount      = BigDecimal.ZERO;</span>
+<span class="fc" id="L49">            BigDecimal totalReportedTax = BigDecimal.ZERO;</span>
+<span class="fc" id="L50">            BigDecimal totalExpectedTax = BigDecimal.ZERO;</span>
+<span class="fc" id="L51">            BigDecimal totalTaxGap      = BigDecimal.ZERO;</span>
+<span class="fc" id="L52">            int total                   = txList.size();</span>
+<span class="fc" id="L53">            int nonCompliant            = 0;</span>
+
+<span class="fc bfc" id="L55" title="All 2 branches covered.">            for (Transaction tx : txList) {</span>
+<span class="fc" id="L56">                totalAmount = totalAmount.add(tx.getAmount());</span>
+
+<span class="fc bfc" id="L58" title="All 2 branches covered.">                if (tx.getReportedTax() != null) {</span>
+<span class="fc" id="L59">                    totalReportedTax = totalReportedTax.add(tx.getReportedTax());</span>
+                }
+
+<span class="fc" id="L62">                TaxResult result = taxResultRepository.findByTransactionId(tx.getTransactionId());</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">                if (result != null) {</span>
+<span class="fc" id="L64">                    totalExpectedTax = totalExpectedTax.add(result.getExpectedTax());</span>
+<span class="fc" id="L65">                    totalTaxGap      = totalTaxGap.add(result.getTaxGap());</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">                    if (!&quot;COMPLIANT&quot;.equals(result.getComplianceStatus())) {</span>
+<span class="fc" id="L67">                        nonCompliant++;</span>
+                    }
+                }
+<span class="fc" id="L70">            }</span>
+
+            // complianceScore = 100 - (nonCompliant / total * 100)
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">            double complianceScore = total == 0 ? 100.0</span>
+<span class="fc" id="L74">                    : BigDecimal.valueOf(100.0 - ((double) nonCompliant / total * 100.0))</span>
+<span class="fc" id="L75">                        .setScale(2, RoundingMode.HALF_UP).doubleValue();</span>
+
+<span class="fc" id="L77">            Map&lt;String, Object&gt; row = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L78">            row.put(&quot;customerId&quot;,               customerId);</span>
+<span class="fc" id="L79">            row.put(&quot;totalTransactions&quot;,         total);</span>
+<span class="fc" id="L80">            row.put(&quot;totalAmount&quot;,              totalAmount);</span>
+<span class="fc" id="L81">            row.put(&quot;totalReportedTax&quot;,         totalReportedTax);</span>
+<span class="fc" id="L82">            row.put(&quot;totalExpectedTax&quot;,         totalExpectedTax);</span>
+<span class="fc" id="L83">            row.put(&quot;totalTaxGap&quot;,              totalTaxGap);</span>
+<span class="fc" id="L84">            row.put(&quot;nonCompliantTransactions&quot;, nonCompliant);</span>
+<span class="fc" id="L85">            row.put(&quot;complianceScore&quot;,          complianceScore);</span>
+<span class="fc" id="L86">            report.add(row);</span>
+<span class="fc" id="L87">        }</span>
+
+<span class="fc" id="L89">        return report;</span>
+    }
+
+    // ─────────────────────────────────────────────────
+    // Report 2: Exception Summary
+    // Total exceptions grouped by severity + customer
+    // ─────────────────────────────────────────────────
+    public Map&lt;String, Object&gt; getExceptionSummary() {
+
+<span class="fc" id="L98">        List&lt;TaxException&gt; all = taxExceptionRepository.findAll();</span>
+
+<span class="fc" id="L100">        Map&lt;String, Long&gt; bySeverity = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L101">        Map&lt;String, Long&gt; byCustomer = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        for (TaxException ex : all) {</span>
+<span class="fc" id="L104">            bySeverity.merge(ex.getSeverity(), 1L, Long::sum);</span>
+<span class="fc" id="L105">            byCustomer.merge(ex.getCustomerId(), 1L, Long::sum);</span>
+<span class="fc" id="L106">        }</span>
+
+<span class="fc" id="L108">        Map&lt;String, Object&gt; summary = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L109">        summary.put(&quot;totalExceptions&quot;, (long) all.size());</span>
+<span class="fc" id="L110">        summary.put(&quot;countBySeverity&quot;, bySeverity);</span>
+<span class="fc" id="L111">        summary.put(&quot;countByCustomer&quot;, byCustomer);</span>
+<span class="fc" id="L112">        return summary;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

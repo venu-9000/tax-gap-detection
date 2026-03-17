@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Transaction.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Tax Gap Detection Service</a> &gt; <a href="index.source.html" class="el_package">com.tax.entity</a> &gt; <span class="el_source">Transaction.java</span></div><h1>Transaction.java</h1><pre class="source lang-java linenums">package com.tax.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+/**
+ * Stores every transaction uploaded by users.
+ * One row = one financial transaction.
+ */
+@Entity
+@Table(name = &quot;transactions&quot;)
+<span class="pc bnc" id="L16" title="All 94 branches missed.">@Data</span>
+public class Transaction {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L21">    private Long id;</span>
+
+    @Column(name = &quot;transaction_id&quot;, unique = true, nullable = false)
+<span class="fc" id="L24">    private String transactionId;         // e.g. TX-001</span>
+
+    @Column(name = &quot;date&quot;)
+<span class="nc" id="L27">    private LocalDate date;               // transaction date</span>
+
+    @Column(name = &quot;customer_id&quot;)
+<span class="fc" id="L30">    private String customerId;            // e.g. CUST-001</span>
+
+    @Column(name = &quot;amount&quot;, precision = 19, scale = 4)
+<span class="fc" id="L33">    private BigDecimal amount;            // transaction amount</span>
+
+    @Column(name = &quot;tax_rate&quot;, precision = 10, scale = 6)
+<span class="fc" id="L36">    private BigDecimal taxRate;           // e.g. 0.18 = 18%</span>
+
+    @Column(name = &quot;reported_tax&quot;, precision = 19, scale = 4)
+<span class="fc" id="L39">    private BigDecimal reportedTax;       // what customer says they paid (optional)</span>
+
+    @Column(name = &quot;transaction_type&quot;)
+<span class="fc" id="L42">    private String transactionType;       // SALE / REFUND / EXPENSE</span>
+
+    @Column(name = &quot;validation_status&quot;)
+<span class="fc" id="L45">    private String validationStatus;      // SUCCESS or FAILURE</span>
+
+    @Column(name = &quot;failure_reasons&quot;, columnDefinition = &quot;TEXT&quot;)
+<span class="fc" id="L48">    private String failureReasons;        // if FAILURE, why?</span>
+
+    @Column(name = &quot;created_at&quot;)
+<span class="nc" id="L51">    private LocalDateTime createdAt;</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

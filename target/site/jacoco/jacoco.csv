@@ -1,0 +1,16 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+Tax Gap Detection Service,com.tax.dto,TransactionRequest,263,52,62,0,0,8,35,15,4,15
+Tax Gap Detection Service,com.tax.dto,BatchRequest,65,10,14,0,0,2,11,3,4,3
+Tax Gap Detection Service,com.tax,TaxApplication,8,0,0,0,3,0,2,0,2,0
+Tax Gap Detection Service,com.tax.controller,ExceptionController,74,0,6,0,14,0,6,0,3,0
+Tax Gap Detection Service,com.tax.controller,TransactionController,131,0,6,0,27,0,7,0,4,0
+Tax Gap Detection Service,com.tax.controller,ReportController,57,0,0,0,12,0,3,0,3,0
+Tax Gap Detection Service,com.tax.seeder,DataSeeder,116,0,2,0,31,0,4,0,3,0
+Tax Gap Detection Service,com.tax.service,ReportService,2,263,1,15,0,57,1,11,0,4
+Tax Gap Detection Service,com.tax.service,TransactionService,0,624,5,65,0,142,5,41,0,10
+Tax Gap Detection Service,com.tax.service,ExceptionService,0,78,0,24,0,18,0,15,0,3
+Tax Gap Detection Service,com.tax.entity,TaxResult,243,32,54,0,3,4,35,9,8,9
+Tax Gap Detection Service,com.tax.entity,AuditLog,216,19,46,0,5,1,33,5,10,5
+Tax Gap Detection Service,com.tax.entity,Transaction,408,67,94,0,3,9,55,19,8,19
+Tax Gap Detection Service,com.tax.entity,TaxRule,333,49,74,0,3,7,46,14,9,14
+Tax Gap Detection Service,com.tax.entity,TaxException,278,37,62,0,5,3,40,10,9,10
