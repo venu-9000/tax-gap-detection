@@ -30,3 +30,6 @@ jobs:
         with:
           name: app-jar
           path: target/*.jar
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+
