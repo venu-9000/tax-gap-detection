@@ -21,6 +21,7 @@ jobs:
 
       - name: Build with Maven
         run: mvn clean package
+
       - name: Run tests
         run: mvn test
 
@@ -29,5 +30,3 @@ jobs:
         with:
           name: app-jar
           path: target/*.jar
-``
-``
